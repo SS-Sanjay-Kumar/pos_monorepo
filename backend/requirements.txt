@@ -1,0 +1,11 @@
+fastapi==0.100.0
+uvicorn[standard]==0.22.0
+SQLAlchemy==2.0.20
+asyncmy==0.2.10
+alembic==1.11.1
+pydantic==1.10.12
+python-jose==3.3.0
+argon2-cffi==21.3.0
+python-dotenv==1.0.0
+pytest==7.4.0
+httpx==0.25.0

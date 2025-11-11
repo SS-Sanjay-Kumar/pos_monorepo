@@ -1,0 +1,17 @@
+{
+  "invoice_number": "INV001",
+  "created_by": null,
+  "table_number": "T5",
+  "order_type": "dine-in",
+  "employee_id": 1,
+  "items": [
+    {
+      "product_id": 1,
+      "description": "Paneer Butter Masala",
+      "quantity": 2,
+      "unit_price": 200.00,
+      "tax_rate": 5.00,
+      "discount_amount": 0.00
+    }
+  ]
+}

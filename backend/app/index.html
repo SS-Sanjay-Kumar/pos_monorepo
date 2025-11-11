@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hotel Billing API Tester</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; }
+    .card { margin-bottom: 1rem; }
+    pre { background-color: #212529; color: #f8f9fa; padding: 0.5rem; border-radius: 5px; }
+    .btn { width: 100%; }
+  </style>
+</head>
+<body class="container py-4">
+  <h1 class="text-center mb-4">🏨 Hotel Billing API Tester</h1>
+
+  <div id="apiBase" class="mb-3">
+    <label class="form-label">API Base URL:</label>
+    <input type="text" id="api" class="form-control" value="http://127.0.0.1:8000">
+  </div>
+
+  <!-- Health Check -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">1️⃣ Health Check</h5>
+      <button class="btn btn-success" onclick="checkHealth()">Check /health</button>
+      <pre id="healthResult"></pre>
+    </div>
+  </div>
+
+  <!-- Tax Slab -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">2️⃣ Create Tax Slab</h5>
+      <input id="taxName" class="form-control mb-2" placeholder="Tax Name (e.g., GST 5%)">
+      <input id="taxRate" type="number" step="0.01" class="form-control mb-2" placeholder="Rate (e.g., 5.00)">
+      <button class="btn btn-primary" onclick="createTax()">Create Tax Slab</button>
+      <pre id="taxResult"></pre>
+    </div>
+  </div>
+
+  <!-- Employee -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">3️⃣ Create Employee</h5>
+      <input id="empName" class="form-control mb-2" placeholder="Full Name">
+      <input id="empCode" class="form-control mb-2" placeholder="Employee Code">
+      <input id="designation" class="form-control mb-2" placeholder="Designation (e.g., Waiter)">
+      <button class="btn btn-primary" onclick="createEmployee()">Create Employee</button>
+      <pre id="empResult"></pre>
+    </div>
+  </div>
+
+  <!-- Product -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">4️⃣ Create Product</h5>
+      <input id="prodName" class="form-control mb-2" placeholder="Product Name">
+      <input id="prodSku" class="form-control mb-2" placeholder="SKU">
+      <input id="prodPrice" type="number" step="0.01" class="form-control mb-2" placeholder="Unit Price (e.g., 150)">
+      <input id="taxId" type="number" class="form-control mb-2" placeholder="Tax Slab ID (e.g., 2)">
+      <button class="btn btn-primary" onclick="createProduct()">Create Product</button>
+      <pre id="prodResult"></pre>
+    </div>
+  </div>
+
+  <!-- Invoice -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">5️⃣ Create Invoice</h5>
+      <input id="invEmpId" type="number" class="form-control mb-2" placeholder="Employee ID">
+      <input id="invProdId" type="number" class="form-control mb-2" placeholder="Product ID">
+      <input id="quantity" type="number" step="1" class="form-control mb-2" placeholder="Quantity (e.g., 2)">
+      <input id="unitPrice" type="number" step="0.01" class="form-control mb-2" placeholder="Unit Price (e.g., 150)">
+      <input id="taxRateInv" type="number" step="0.01" class="form-control mb-2" placeholder="Tax Rate (e.g., 5)">
+      <button class="btn btn-primary" onclick="createInvoice()">Create Invoice</button>
+      <pre id="invResult"></pre>
+    </div>
+  </div>
+
+  <!-- Payment -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">6️⃣ Pay Invoice</h5>
+      <input id="payId" type="number" class="form-control mb-2" placeholder="Invoice ID">
+      <input id="amount" type="number" step="0.01" class="form-control mb-2" placeholder="Amount">
+      <input id="method" class="form-control mb-2" placeholder="Method (e.g., cash)">
+      <button class="btn btn-warning" onclick="payInvoice()">Pay</button>
+      <pre id="payResult"></pre>
+    </div>
+  </div>
+
+  <!-- Get Invoice -->
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">7️⃣ Get Invoice by ID</h5>
+      <input id="getInvId" type="number" class="form-control mb-2" placeholder="Invoice ID">
+      <button class="btn btn-info" onclick="getInvoice()">Get Invoice</button>
+      <pre id="getInvResult"></pre>
+    </div>
+  </div>
+
+  <script>
+    const show = (id, data) => {
+      document.getElementById(id).textContent = JSON.stringify(data, null, 2);
+    };
+
+    async function checkHealth() {
+      const base = document.getElementById('api').value;
+      const r = await fetch(`${base}/health`);
+      show('healthResult', await r.json());
+    }
+
+    async function createTax() {
+      const base = document.getElementById('api').value;
+      const rate = parseFloat(document.getElementById('taxRate').value);
+      const name = document.getElementById('taxName').value;
+      const r = await fetch(`${base}/tax_slabs/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ rate, name })
+      });
+      show('taxResult', await r.json());
+    }
+
+    async function createEmployee() {
+      const base = document.getElementById('api').value;
+      const payload = {
+        full_name: document.getElementById('empName').value,
+        employee_code: document.getElementById('empCode').value,
+        designation: document.getElementById('designation').value
+      };
+      const r = await fetch(`${base}/employees/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      show('empResult', await r.json());
+    }
+
+    async function createProduct() {
+      const base = document.getElementById('api').value;
+      const payload = {
+        name: document.getElementById('prodName').value,
+        sku: document.getElementById('prodSku').value,
+        current_unit_price: parseFloat(document.getElementById('prodPrice').value),
+        tax_slab_id: parseInt(document.getElementById('taxId').value),
+        is_active: true
+      };
+      const r = await fetch(`${base}/products/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      show('prodResult', await r.json());
+    }
+
+    async function createInvoice() {
+      const base = document.getElementById('api').value;
+      const payload = {
+        invoice_number: "INV" + Date.now(),
+        table_number: "T1",
+        order_type: "dine-in",
+        employee_id: parseInt(document.getElementById('invEmpId').value),
+        items: [{
+          product_id: parseInt(document.getElementById('invProdId').value),
+          description: "Test Item",
+          quantity: parseFloat(document.getElementById('quantity').value),
+          unit_price: parseFloat(document.getElementById('unitPrice').value),
+          tax_rate: parseFloat(document.getElementById('taxRateInv').value),
+          discount_amount: 0.0
+        }]
+      };
+      const r = await fetch(`${base}/invoices/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      show('invResult', await r.json());
+    }
+
+    async function payInvoice() {
+      const base = document.getElementById('api').value;
+      const id = document.getElementById('payId').value;
+      const amount = document.getElementById('amount').value;
+      const method = document.getElementById('method').value;
+      const r = await fetch(`${base}/invoices/${id}/pay?amount=${amount}&method=${method}`, {
+        method: 'POST'
+      });
+      show('payResult', await r.json());
+    }
+
+    async function getInvoice() {
+      const base = document.getElementById('api').value;
+      const id = document.getElementById('getInvId').value;
+      const r = await fetch(`${base}/invoices/${id}`);
+      show('getInvResult', await r.json());
+    }
+  </script>
+</body>
+</html>
