@@ -14,3 +14,28 @@
 # general
 .DS_Store
 .env
+
+
+# Byte-compiled / optimized / DLL files
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Python virtual environment (catch all venv names)
+venv/
+.env/
+env/
+.venv/
+
+# npm debug log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# VSCode / IDE folders
+.vscode/
+.idea/
+
+# Docker volumes / temp data
+**/tmp/
+**/logs/
