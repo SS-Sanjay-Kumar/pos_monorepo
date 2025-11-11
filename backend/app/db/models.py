@@ -102,9 +102,10 @@ class InvoiceStatusEnum(str, enum.Enum):
 class Invoice(Base):
     __tablename__ = "invoice"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # Use BigInteger so FK types match user_account.id and other BigInteger PKs
+    id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
     invoice_number = Column(String(100), unique=True, nullable=False)
-    created_by = Column(Integer, ForeignKey("user_account.id"), nullable=True)
+    created_by = Column(BigInteger, ForeignKey("user_account.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     status = Column(
         Enum("draft", "preparing", "served", "finalized", "paid", "cancelled", name="invoice_status"),
@@ -117,22 +118,22 @@ class Invoice(Base):
         Enum("dine-in", "takeaway", "delivery", name="order_type"),
         default="dine-in"
     )
-    employee_id = Column(Integer, ForeignKey("employee.id"), nullable=True)
+    employee_id = Column(BigInteger, ForeignKey("employee.id"), nullable=True)
 
-    # ✅ Relationship to items
+    # Relationship to items
     items = relationship(
         "InvoiceItem",
         back_populates="invoice",
-        lazy="selectin",   # ✅ this is the key fix
+        lazy="selectin",
         cascade="all, delete-orphan"
     )
 
 class InvoiceItem(Base):
     __tablename__ = "invoice_item"
 
-    id = Column(Integer, primary_key=True, index=True)
-    invoice_id = Column(Integer, ForeignKey("invoice.id"), nullable=False)
-    product_id = Column(Integer, ForeignKey("product.id"), nullable=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    invoice_id = Column(BigInteger, ForeignKey("invoice.id"), nullable=False)
+    product_id = Column(BigInteger, ForeignKey("product.id"), nullable=True)
     description = Column(String(512))
     quantity = Column(Numeric(12, 2), nullable=False)
     unit_price = Column(Numeric(12, 2), nullable=False)
@@ -142,11 +143,10 @@ class InvoiceItem(Base):
     line_tax_amount = Column(Numeric(14, 2), nullable=False)
     line_total_incl_tax = Column(Numeric(14, 2), nullable=False)
 
-    # ✅ Relationship to parent invoice
     invoice = relationship(
         "Invoice",
         back_populates="items",
-        lazy="selectin"   # ✅ also important
+        lazy="selectin"
     )
 
 
@@ -158,6 +158,7 @@ class Payment(Base):
     amount = Column(Numeric(14,2), nullable=False)
     method = Column(String(50))
     reference = Column(String(255))
+
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
