@@ -220,10 +220,11 @@ So you can safely stop and restart containers — your data will remain intact.
 
 ## 👨‍💻 Author
 **Rishi Saran**  
-**Sanjay Kumar S S**
-**Srinithya M**
-**Navin S**
+**Sanjay Kumar S S**, 
+**Srinithya M**, 
+**Navin S**, 
 **Shrinithi C S**
+
 📍 Coimbatore, Tamil Nadu  
 💻 Full Stack Developer | AI Enthusiast  
 🔗 [GitHub](https://github.com/rishi-saran)
