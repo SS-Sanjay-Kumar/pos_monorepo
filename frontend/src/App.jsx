@@ -1,11 +1,19 @@
-// App.jsx - Responsive Hotel Billing with Burger Menu
+// App.jsx - Responsive Hotel Billing with Burger Menu + Admin Dashboard
 import React, { useState, useContext, createContext, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  Navigate,
+  useNavigate,
+  useParams
+} from "react-router-dom";
 import './styles.css';
 
 /* -------------------- App State Context -------------------- */
 const AppContext = createContext(null);
-function useApp() { return useContext(AppContext); }
+export function useApp() { return useContext(AppContext); }
 
 function generateId(prefix = "B") {
   return `${prefix}${Date.now().toString().slice(-6)}`;
@@ -87,6 +95,58 @@ function AppProvider({children}){
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
 
+/* -------------------- Dashboard (Admin only) -------------------- */
+function Dashboard(){
+  const { menu, bills, tables } = useApp();
+  const navigate = useNavigate();
+
+  const totalProducts = (menu || []).length;
+  const totalBills = (bills || []).length;
+  // compute revenue from paid bills (sum of price*qty + gst)
+  const totalRevenue = (bills || []).filter(b => b.paid).reduce((sum, b) => {
+    const billTotal = (b.items || []).reduce((s, it) => {
+      const subtotal = (Number(it.price) || 0) * (Number(it.qty) || 0);
+      const gst = subtotal * (Number(it.gst) || 0);
+      return s + subtotal + gst;
+    }, 0);
+    return sum + billTotal;
+  }, 0);
+
+  const fmt = (val) => new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR' }).format(val);
+
+  return (
+    <div className="dashboard-page">
+      <h2 className="h2">Dashboard</h2>
+
+      <div className="dashboard-grid">
+        <div className="dashboard-card">
+          <div className="muted">TOTAL REVENUE</div>
+          <div className="dashboard-value">{fmt(totalRevenue)}</div>
+        </div>
+
+        <div className="dashboard-card">
+          <div className="muted">TOTAL BILLS</div>
+          <div className="dashboard-value">{totalBills}</div>
+        </div>
+
+        <div className="dashboard-card">
+          <div className="muted">TOTAL PRODUCTS</div>
+          <div className="dashboard-value">{totalProducts}</div>
+        </div>
+      </div>
+
+      <div className="card quick-actions-card">
+        <div className="h3">Quick Actions</div>
+        <div className="quick-actions">
+          <button className="btn btn-primary action-btn" onClick={()=>navigate('/tables')}>＋ New Bill</button>
+          <button className="btn btn-primary action-btn" onClick={()=>navigate('/menu')}>⚙️ Manage Menu</button>
+          <button className="btn btn-primary action-btn" onClick={()=>navigate('/bills')}>🧾 View Bill History</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* -------------------- Login Page -------------------- */
 function LoginPage(){
   const { setUser, users } = useApp();
@@ -101,9 +161,10 @@ function LoginPage(){
     const matched = users.find(u=>u.id === userid && u.password === password);
     if(!matched) return alert('Invalid credentials');
     setUser({ id: matched.id, name: matched.name, role: matched.role });
-    navigate('/tables');
+    // Admin should land on dashboard; staff goes to tables
+    if(matched.role === 'admin') navigate('/dashboard');
+    else navigate('/tables');
   }
-
   return (
     <div className="login-container">
       <form onSubmit={handleLogin} className="card login-card">
@@ -134,11 +195,12 @@ function Layout({children}){
       <nav className="nav">
         <div className="nav-inner">
           <div className="nav-left">
-            <Link to="/tables" className="brand">🍽️ HotelBilling</Link>
+            <Link to={user?.role === 'admin' ? "/dashboard" : "/tables"} className="brand">🍽️ HotelBilling</Link>
             <div className="nav-links">
               <Link to="/tables" onClick={closeMenu}>Tables</Link>
               <Link to="/bills" onClick={closeMenu}>Bills</Link>
               {user && user.role === 'admin' ? <Link to="/menu" onClick={closeMenu}>Admin</Link> : null}
+              {user && user.role === 'admin' ? <Link to="/dashboard" onClick={closeMenu}>Dashboard</Link> : null}
             </div>
           </div>
 
@@ -174,6 +236,7 @@ function Layout({children}){
           <Link to="/tables" onClick={closeMenu} className="mobile-nav-link">📋 Tables</Link>
           <Link to="/bills" onClick={closeMenu} className="mobile-nav-link">🧾 Bills</Link>
           {user && user.role === 'admin' ? <Link to="/menu" onClick={closeMenu} className="mobile-nav-link">⚙️ Admin</Link> : null}
+          {user && user.role === 'admin' ? <Link to="/dashboard" onClick={closeMenu} className="mobile-nav-link">📊 Dashboard</Link> : null}
         </nav>
         <div className="mobile-menu-footer">
           <button onClick={logout} className="btn btn-danger" style={{width:'100%'}}>Logout</button>
@@ -323,8 +386,7 @@ function BillsPage(){
 /* -------------------- Bill View -------------------- */
 function BillView(){
   const { bills } = useApp();
-  const { pathname } = window.location;
-  const id = pathname.split('/').pop();
+  const { id } = useParams();
   const bill = bills.find(b=>b.id===id);
   if(!bill) return <div className="card"><p className="muted">Bill not found</p></div>;
 
@@ -480,17 +542,16 @@ function AddTableForm({onAdd}){
     <form onSubmit={(e)=>{e.preventDefault(); if(val) onAdd(val); setVal('');}} className="inline-form">
       <input placeholder="Table name" value={val} onChange={e=>setVal(e.target.value)} className="input" />
       <button className="btn btn-primary">Add</button>
-    </form>
+    </form> 
   )
 }
-
 function AddWaiterForm({onAdd}){ 
   const [val, setVal] = useState(''); 
   return ( 
     <form onSubmit={(e)=>{e.preventDefault(); if(val) onAdd(val); setVal('');}} className="inline-form">
       <input placeholder="Waiter name" value={val} onChange={e=>setVal(e.target.value)} className="input" />
       <button className="btn btn-primary">Add</button>
-    </form>
+    </form> 
   )
 }
 
@@ -505,6 +566,7 @@ export default function App(){
           <Route path="/bills" element={<RequireAuth><Layout><BillsPage /></Layout></RequireAuth>} />
           <Route path="/bill/:id" element={<RequireAuth><Layout><BillView /></Layout></RequireAuth>} />
           <Route path="/menu" element={<RequireAdmin><Layout><MenuAdminPage /></Layout></RequireAdmin>} />
+          <Route path="/dashboard" element={<RequireAdmin><Layout><Dashboard /></Layout></RequireAdmin>} />
         </Routes>
       </AppProvider>
     </Router>
