@@ -11,13 +11,17 @@ from app.api import employees as employees_router
 from app.api import invoices as invoices_router
 from app.api import payments as payments_router
 from app.api import tax_slabs as tax_slabs_router
-
+from app.db.session import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Hotel Billing API (dev)")
-
+@app.on_event("startup")
+async def on_startup():
+    # Create database tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 # For local dev use this set — restrict to your live-server origin if you prefer:
 origins = [

@@ -1,23 +1,38 @@
-from pydantic import BaseSettings
-from datetime import timedelta
+# from pydantic import BaseSettings
+# from datetime import timedelta
 
+
+# class Settings(BaseSettings):
+#     PROJECT_NAME: str = "HotelBillingAPI"
+#     DATABASE_URL: str = "mysql+asyncmy://myuser:mypassword@127.0.0.1:3306/hotel_db"
+#     SECRET_KEY: str = "change_this_to_a_random_secret"
+#     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+#     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+#     ALGORITHM: str = "HS256"
+#     SERVER_HOST: str = "0.0.0.0"
+#     SERVER_PORT: int = 8000
+
+#     class Config:
+#         env_file = ".env"
+#         env_file_encoding = "utf-8"
+
+# settings = Settings()
+# ACCESS_TOKEN_EXPIRE = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+# REFRESH_TOKEN_EXPIRE = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+
+# backend/app/core/config.py
+import os
+from pydantic import BaseSettings
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "HotelBillingAPI"
-    DATABASE_URL: str = "mysql+asyncmy://myuser:mypassword@127.0.0.1:3306/hotel_db"
-    SECRET_KEY: str = "change_this_to_a_random_secret"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    ALGORITHM: str = "HS256"
-    SERVER_HOST: str = "0.0.0.0"
-    SERVER_PORT: int = 8000
+    API_V1_STR: str = "/api/v1"
+    SECRET_KEY: str = os.environ.get("SECRET_KEY", "a_very_secret_key_fallback")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    
+    # ADD THIS LINE
+    DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
 
     class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+        case_sensitive = True
 
 settings = Settings()
-ACCESS_TOKEN_EXPIRE = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-REFRESH_TOKEN_EXPIRE = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-
-
