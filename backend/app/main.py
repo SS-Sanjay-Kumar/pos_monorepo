@@ -13,7 +13,9 @@ from app.api import payments as payments_router
 from app.api import tax_slabs as tax_slabs_router
 from app.db.session import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi import APIRouter
+import asyncio
+from sqlalchemy.exc import OperationalError
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Hotel Billing API (dev)")
@@ -30,13 +32,16 @@ origins = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
     # Vite React dev server (for local frontend)
+    "http://localhost:3000",
     "http://127.0.0.1:5173",
-    "http://localhost:5173",
+    "https://hotel-billing-backend.onrender.com/",
+
+
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,   # set to ["*"] to allow all origins (dev only)
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,3 +73,23 @@ async def on_startup():
         logger.exception("SQLAlchemy error during startup: %s", e)
     except Exception as e:
         logger.exception("Unexpected error during startup: %s", e)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+# in app/main.py startup event
+
+
+@app.on_event("startup")
+async def on_startup():
+    try:
+        async with engine.begin() as conn:
+            # run migrations or ensure tables
+            await conn.run_sync(Base.metadata.create_all)
+    except OperationalError as e:
+        # log and continue; re-raise if you want strict fail
+        print("DB connection failed on startup:", e)
+        # Optionally: schedule retry
+        # await asyncio.sleep(5); await on_startup()

@@ -1,38 +1,39 @@
-# from pydantic import BaseSettings
-# from datetime import timedelta
-
-
-# class Settings(BaseSettings):
-#     PROJECT_NAME: str = "HotelBillingAPI"
-#     DATABASE_URL: str = "mysql+asyncmy://myuser:mypassword@127.0.0.1:3306/hotel_db"
-#     SECRET_KEY: str = "change_this_to_a_random_secret"
-#     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-#     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-#     ALGORITHM: str = "HS256"
-#     SERVER_HOST: str = "0.0.0.0"
-#     SERVER_PORT: int = 8000
-
-#     class Config:
-#         env_file = ".env"
-#         env_file_encoding = "utf-8"
-
-# settings = Settings()
-# ACCESS_TOKEN_EXPIRE = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-# REFRESH_TOKEN_EXPIRE = timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-
 # backend/app/core/config.py
 import os
-from pydantic import BaseSettings
+from pydantic import BaseSettings, AnyUrl, validator
+from typing import Optional
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = os.environ.get("SECRET_KEY", "a_very_secret_key_fallback")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
-    
-    # ADD THIS LINE
+
+    # Token expiry (minutes)
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", 60 * 24 * 8))  # 8 days default
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = int(os.environ.get("REFRESH_TOKEN_EXPIRE_MINUTES", 60 * 24 * 30))  # 30 days default
+
+    # DB: accept a plain string, but we will normalise it for asyncpg usage later
     DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
 
     class Config:
         case_sensitive = True
 
+    # Optionally validate / normalize DB url here (not necessary but handy)
+    @validator("DATABASE_URL", pre=True)
+    def normalize_database_url(cls, v: Optional[str]) -> str:
+        if not v:
+            return ""
+        # if somebody used the short `postgres://` form, convert to SQLAlchemy asyncpg form
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        # if already has asyncpg prefix, return as-is
+        return v
+
+# instantiate settings
 settings = Settings()
+
+# ---- exported module-level names for backwards-compatibility ----
+ACCESS_TOKEN_EXPIRE = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE = settings.REFRESH_TOKEN_EXPIRE_MINUTES
+
+# convenience alias for raw DB URL (already normalized by the validator)
+DATABASE_URL = settings.DATABASE_URL
