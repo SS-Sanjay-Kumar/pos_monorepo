@@ -305,6 +305,7 @@ body {
 }
 
 /* ==================== Page Layouts ==================== */
+/* NOTE: left column is details (menu+bills), right column is tables list */
 .page-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -377,7 +378,7 @@ body {
   color: var(--primary);
 }
 
-/* ==================== Menu Items ==================== */
+/* ==================== Menu Items (legacy) ==================== */
 .menu-scroll {
   max-height: 240px;
   overflow-y: auto;
@@ -519,9 +520,71 @@ body {
   margin-bottom: 6px;
 }
 
-/* ==================== Responsive Breakpoints ==================== */
+/* ==================== NEW: Menu grid as boxed cards (sketch style) ---------- */
+.table-detail-card { padding: 18px; }
+.table-layout { display: flex; gap: 18px; margin-top: 12px; align-items: flex-start; }
 
-/* Tablet: 768px and up */
+/* left menu panel */
+.menu-panel { flex: 2; }
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+/* each menu card */
+.menu-card {
+  background: var(--bg);
+  border: 1.2px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--card-shadow);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.menu-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); }
+
+.menu-card-top { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; }
+.menu-card-title { font-weight:700; color:var(--text); font-size:0.98rem; }
+.menu-card-price { font-weight:700; color:var(--text-muted); font-size:0.9rem; font-family:monospace; }
+
+/* bottom row contains GST and qty controls */
+.menu-card-bottom { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.menu-gst { font-size:0.82rem; color:var(--text-secondary); }
+
+/* quantity controls (round buttons) */
+.qty-controls { display:flex; align-items:center; gap:8px; }
+.qty-btn {
+  width:34px; height:34px; border-radius:8px; border:none; font-size:18px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  background:var(--bg-secondary);
+}
+.qty-btn:active { transform:translateY(1px); }
+.qty-display { min-width:28px; text-align:center; font-weight:700; font-family:monospace; color:var(--text); }
+
+/* right bill panel */
+.bill-panel { flex: 1; min-width:260px; max-width:360px; display:flex; flex-direction:column; gap:12px; }
+.bill-items-panel { max-height:320px; overflow:auto; padding:8px; background:var(--bg-secondary); border-radius:8px; }
+.bill-row-detailed { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); }
+.bill-row-detailed:last-child { border-bottom:none; }
+
+.bill-summary-inline { display:flex; flex-direction:column; gap:8px; padding:8px; background:transparent; }
+.bill-summary-inline div { display:flex; justify-content:space-between; align-items:center; font-family:monospace; }
+.total-row { font-size:1.05rem; font-weight:800; }
+
+/* actions */
+.bill-actions-panel { display:flex; gap:8px; justify-content:space-between; align-items:center; margin-top:8px; }
+
+/* Responsive: stack on small screens */
+@media (max-width: 800px) {
+  .table-layout { flex-direction: column; }
+  .bill-panel { max-width:100%; width:100%; }
+  .menu-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+
+/* ==================== Responsive Breakpoints ==================== */
 @media (min-width: 768px) {
   .burger-btn { display: none; }
   .nav-links { display: flex; }
@@ -532,8 +595,9 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
   
+  /* desktop/tablet: side-by-side columns (details LEFT, tables RIGHT) */
   .page-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 2fr 1fr;
   }
   
   .admin-grid {
@@ -541,7 +605,6 @@ body {
   }
 }
 
-/* Desktop: 1024px and up */
 @media (min-width: 1024px) {
   .tables-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -552,7 +615,6 @@ body {
   }
 }
 
-/* Large Desktop: 1280px and up */
 @media (min-width: 1280px) {
   .tables-grid {
     grid-template-columns: repeat(4, 1fr);
@@ -589,7 +651,6 @@ body {
 .dashboard-card .muted { font-size: 0.85rem; color: var(--text-muted); }
 .dashboard-value { font-size: 1.25rem; font-weight: 800; margin-top: 8px; color: var(--text); }
 
-/* Quick actions card */
 .quick-actions-card { margin-top: 10px; }
 .quick-actions {
   display: flex;
@@ -599,13 +660,11 @@ body {
 }
 .action-btn { flex: 1; padding: 12px 18px; font-size: 1rem; }
 
-/* Responsive adjustments for dashboard */
 @media (max-width: 900px) {
   .dashboard-grid { grid-template-columns: 1fr; }
   .quick-actions { flex-direction: column; }
   .action-btn { width: 100%; }
 }
 
-/* small spacing helpers */
 .m-1 { margin: 8px; }
 .p-1 { padding: 8px; }

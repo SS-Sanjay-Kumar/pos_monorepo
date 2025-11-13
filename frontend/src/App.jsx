@@ -1,4 +1,4 @@
-// App.jsx - Responsive Hotel Billing with Burger Menu + Admin Dashboard
+// App.jsx - Responsive Hotel Billing with boxed menu cards + qty controls
 import React, { useState, useContext, createContext, useEffect } from "react";
 import {
   BrowserRouter as Router,
@@ -69,6 +69,7 @@ function AppProvider({children}){
     setUsers(u=>[...u, { id, name, role, password }]);
     return { ok:true };
   }
+
   const createBill = ({tableId, waiterName}) => {
     const id = generateId('B');
     const newBill = { id, tableId, waiterName, items: [], createdAt: new Date().toISOString(), paid: false };
@@ -76,22 +77,46 @@ function AppProvider({children}){
     setTables(t=>t.map(x=> x.id===tableId ? {...x, currentBillId: id} : x));
     return id;
   }
+
   const addItemToBill = (billId, menuItem, qty=1) => {
     setBills(b=>b.map(bl=>bl.id===billId ? {...bl, items: addOrUpdateItem(bl.items, menuItem, qty)} : bl));
   }
   function addOrUpdateItem(items, menuItem, qty){
     const idx = items.findIndex(i=>i.id===menuItem.id);
-    if(idx>=0){ const copy = [...items]; copy[idx].qty += qty; return copy; }
+    if(idx>=0){ const copy = [...items]; copy[idx].qty += qty; if(copy[idx].qty<=0) copy.splice(idx,1); return copy; }
     return [...items, { ...menuItem, qty }];
   }
-  const removeItemFromBill = (billId, itemId) => setBills(b=>b.map(bl=> bl.id===billId ? {...bl, items: bl.items.filter(i=>i.id!==itemId)} : bl));
-  const finalizeBill = (billId) => {
-    setBills(b=>b.map(bl=> bl.id===billId ? {...bl, paid:true, finalizedAt: new Date().toISOString()} : bl));
-    const bill = bills.find(x=>x.id===billId);
-    if(bill) setTables(t=>t.map(x=> x.id===bill.tableId ? {...x, currentBillId: null} : x));
+
+  // NEW: change item qty by delta (positive or negative)
+  const changeItemQty = (billId, itemId, delta = 1) => {
+    setBills(prevBills => {
+      return prevBills.map(bl => {
+        if (bl.id !== billId) return bl;
+        const items = [...(bl.items || [])];
+        const idx = items.findIndex(i => i.id === itemId);
+        if (idx === -1) {
+          if (delta > 0) {
+            const menuItem = menu.find(m => m.id === itemId);
+            if (!menuItem) return bl;
+            items.push({ ...menuItem, qty: delta });
+          }
+        } else {
+          items[idx].qty = (Number(items[idx].qty) || 0) + delta;
+          if (items[idx].qty <= 0) items.splice(idx, 1);
+        }
+        return { ...bl, items };
+      });
+    });
   }
 
-  const value = { menu, addMenuItem, updateMenuItem, deleteMenuItem, tables, addTable, waiters, addWaiter, bills, createBill, addItemToBill, removeItemFromBill, finalizeBill, users, addUser, user, setUser };
+  const removeItemFromBill = (billId, itemId) => setBills(b=>b.map(bl=> bl.id===billId ? {...bl, items: bl.items.filter(i=>i.id!==itemId)} : bl));
+  const finalizeBill = (billId) => {
+    const billObj = bills.find(x=>x.id===billId);
+    setBills(b=>b.map(bl=> bl.id===billId ? {...bl, paid:true, finalizedAt: new Date().toISOString()} : bl));
+    if(billObj) setTables(t=>t.map(x=> x.id===billObj.tableId ? {...x, currentBillId: null} : x));
+  }
+
+  const value = { menu, addMenuItem, updateMenuItem, deleteMenuItem, tables, addTable, waiters, addWaiter, bills, createBill, addItemToBill, changeItemQty, removeItemFromBill, finalizeBill, users, addUser, user, setUser };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
 
@@ -102,7 +127,6 @@ function Dashboard(){
 
   const totalProducts = (menu || []).length;
   const totalBills = (bills || []).length;
-  // compute revenue from paid bills (sum of price*qty + gst)
   const totalRevenue = (bills || []).filter(b => b.paid).reduce((sum, b) => {
     const billTotal = (b.items || []).reduce((s, it) => {
       const subtotal = (Number(it.price) || 0) * (Number(it.qty) || 0);
@@ -161,7 +185,6 @@ function LoginPage(){
     const matched = users.find(u=>u.id === userid && u.password === password);
     if(!matched) return alert('Invalid credentials');
     setUser({ id: matched.id, name: matched.name, role: matched.role });
-    // Admin should land on dashboard; staff goes to tables
     if(matched.role === 'admin') navigate('/dashboard');
     else navigate('/tables');
   }
@@ -220,10 +243,8 @@ function Layout({children}){
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
       {menuOpen && <div className="menu-overlay" onClick={closeMenu}></div>}
       
-      {/* Mobile Menu Drawer */}
       <div className={menuOpen ? 'mobile-menu open' : 'mobile-menu'}>
         <div className="mobile-menu-header">
           <div className="mobile-user-info">
@@ -253,8 +274,14 @@ function TablesPage(){
   const { tables } = useApp();
   const [selected, setSelected] = useState(null);
 
+  // NOTE: order swapped here so details (menu + bill) appear LEFT, and tables ICONS on the RIGHT.
   return (
     <div className="page-grid">
+      <div className="details-section">
+        <h2 className="h2">Table Details</h2>
+        {selected ? <TableDetail table={selected} /> : <div className="card"><p className="muted">Select a table to manage bills</p></div>}
+      </div>
+
       <div className="tables-section">
         <h2 className="h2">Tables</h2>
         <div className="tables-grid">
@@ -271,17 +298,13 @@ function TablesPage(){
           ))}
         </div>
       </div>
-
-      <div className="details-section">
-        <h2 className="h2">Table Details</h2>
-        {selected ? <TableDetail table={selected} /> : <div className="card"><p className="muted">Select a table to manage bills</p></div>}
-      </div>
     </div>
   )
 }
 
-function TableDetail({table}){
-  const { createBill, menu, addItemToBill, bills, waiters } = useApp();
+/* -------------------- Updated TableDetail Component -------------------- */
+function TableDetail({table}) {
+  const { createBill, menu, changeItemQty, bills, waiters, finalizeBill } = useApp();
   const [billId, setBillId] = useState(table.currentBillId || null);
   const [waiterName, setWaiterName] = useState(waiters[0]?.name || '');
 
@@ -293,14 +316,24 @@ function TableDetail({table}){
     const id = createBill({tableId: table.id, waiterName}); 
     setBillId(id); 
   }
-  const addItem = (menuItem)=>{ 
-    if(!billId) return alert('Create a bill first'); 
-    addItemToBill(billId, menuItem, 1); 
+
+  const inc = (menuItem) => {
+    if(!billId) return alert('Create a bill first');
+    changeItemQty(billId, menuItem.id, +1);
   }
+  const dec = (menuItem) => {
+    if(!billId) return alert('Create a bill first');
+    changeItemQty(billId, menuItem.id, -1);
+  }
+
   const bill = bills.find(b=>b.id===billId);
 
+  const subtotal = bill?.items?.reduce((s,i)=> s + i.price * i.qty, 0) || 0;
+  const gstTotal = bill?.items?.reduce((s,i)=> s + i.price * i.qty * i.gst, 0) || 0;
+  const total = subtotal + gstTotal;
+
   return (
-    <div className="card">
+    <div className="card table-detail-card">
       <div className="card-header">
         <div>
           <div className="table-detail-name">{table.name}</div>
@@ -314,39 +347,76 @@ function TableDetail({table}){
       </select>
 
       {!billId ? (
-        <button onClick={startBill} className="btn btn-primary" style={{width:'100%', marginTop:12}}>Create Bill</button>
+        <button onClick={startBill} className="btn btn-primary create-bill-btn">Create Bill</button>
       ) : (
         <div className="active-bill-info">Active bill: <span>{billId}</span></div>
       )}
 
-      <h4 className="h3">Menu</h4>
-      <div className="menu-scroll">
-        {menu.map(it=> (
-          <div key={it.id} className="menu-item">
-            <div className="menu-item-info">
-              <div className="menu-item-name">{it.name}</div>
-              <div className="menu-item-price">₹{it.price} • GST {Math.round(it.gst*100)}%</div>
-            </div>
-            <button onClick={()=>addItem(it)} className="btn btn-sm btn-primary">Add</button>
-          </div>
-        ))}
-      </div>
+      <div className="table-layout">
+        {/* LEFT: menu grid */}
+        <div className="menu-panel">
+          <h4 className="h3">Menu</h4>
+          <div className="menu-grid">
+            {menu.map(it=> {
+              const existing = bill?.items?.find(x=>x.id===it.id);
+              const qty = existing ? existing.qty : 0;
+              return (
+                <div key={it.id} className="menu-card">
+                  <div className="menu-card-top">
+                    <div className="menu-card-title">{it.name}</div>
+                    <div className="menu-card-price">₹{it.price}</div>
+                  </div>
 
-      <h4 className="h3">Bill Items</h4>
-      <div className="bill-items">
-        {bill?.items.length === 0 ? (
-          <p className="muted">No items yet</p>
-        ) : (
-          bill?.items.map(i=> (
-            <div key={i.id} className="bill-row">
-              <span>{i.name} × {i.qty}</span>
-              <span className="bill-amount">₹{(i.price*i.qty).toFixed(2)}</span>
-            </div>
-          ))
-        )}
+                  <div className="menu-card-bottom">
+                    <div className="menu-gst">GST {Math.round(it.gst*100)}%</div>
+                    <div className="qty-controls">
+                      <button className="qty-btn" onClick={()=>dec(it)} aria-label="decrease">−</button>
+                      <div className="qty-display">{qty}</div>
+                      <button className="qty-btn" onClick={()=>inc(it)} aria-label="increase">+</button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* RIGHT: bill summary */}
+        <div className="bill-panel">
+          <h4 className="h3">Bill Items</h4>
+          <div className="bill-items-panel">
+            {(!bill || (bill.items && bill.items.length === 0)) ? (
+              <p className="muted">No items yet</p>
+            ) : (
+              bill.items.map(i=> (
+                <div key={i.id} className="bill-row bill-row-detailed">
+                  <div className="bill-left">
+                    <div className="item-name">{i.name}</div>
+                    <div className="item-detail">{i.qty} × ₹{i.price} • GST {Math.round(i.gst*100)}%</div>
+                  </div>
+                  <div className="bill-right">
+                    <div className="item-total">₹{(i.price*i.qty).toFixed(2)}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="bill-summary-inline">
+            <div><span className="muted">Subtotal</span><strong>₹{subtotal.toFixed(2)}</strong></div>
+            <div><span className="muted">GST</span><strong>₹{gstTotal.toFixed(2)}</strong></div>
+            <div className="summary-divider"></div>
+            <div className="total-row"><strong>Total</strong><strong>₹{total.toFixed(2)}</strong></div>
+          </div>
+
+          <div className="bill-actions-panel">
+            {bill && !bill.paid && <button className="btn btn-primary" onClick={()=>finalizeBill(bill.id)}>Finalize & Pay</button>}
+            {(!bill || bill.items.length===0) ? null : <Link to={`/bill/${bill?.id}`} className="btn btn-outline">View Full Bill</Link>}
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 }
 
 /* -------------------- Bills Page -------------------- */
